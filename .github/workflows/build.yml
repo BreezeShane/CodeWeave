@@ -77,6 +77,20 @@ jobs:
     - name: List artifacts
       run: ls -R ./artifacts
 
+    - name: Debug file structure
+      run: |
+        echo "=== 完整的文件结构 ==="
+        find ./artifacts -type f -name "*" | sort
+        echo "=== Artifacts 目录内容 ==="
+        ls -la ./artifacts/
+        echo "=== 检查每个子目录 ==="
+        for dir in ./artifacts/*/; do
+          if [ -d "$dir" ]; then
+            echo "目录: $dir"
+            ls -la "$dir"
+          fi
+        done
+
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
