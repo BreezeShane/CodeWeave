@@ -156,7 +156,7 @@ CodeWeave automatically detects and applies syntax highlighting for the followin
 
 The generated Markdown file follows this structure:
 
-```markdown
+````markdown
 # Contents of all files
 
 ## File Path: /path/to/file.py
@@ -172,7 +172,7 @@ The generated Markdown file follows this structure:
 ```
 
 **Total files processed:** 42
-```
+````
 
 ## Examples
 
