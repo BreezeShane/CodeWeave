@@ -58,7 +58,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: cw-${{ matrix.name }}${{ matrix.archive_ext }}
+        name: cw-${{ matrix.name }}
         path: cw-${{ github.ref_name }}-${{ matrix.name }}${{ matrix.archive_ext }}
 
   create-release:
@@ -80,18 +80,13 @@ jobs:
     - name: Find and prepare release files
       run: |
         echo "=== 查找所有文件 ==="
-        find . -name "*.tar.gz" -o -name "*.zip" | grep -v node_modules | sort
-        mkdir -p ./release_files
-        find . -name "cw-*.tar.gz" -exec cp {} ./release_files/ \;
-        find . -name "cw-*.zip" -exec cp {} ./release_files/ \;
-        echo "=== 准备发布的文件 ==="
-        ls -la ./release_files/
+        ls -R ./
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          ./artifacts/cw-linux.tar.gz
-          ./artifacts/cw-windows.zip
-          ./artifacts/cw-macos.tar.gz
+          ./artifacts/cw-linux/cw-${{ github.ref_name }}-linux.tar.gz
+          ./artifacts/cw-macos/cw-${{ github.ref_name }}-macos.tar.gz
+          ./artifacts/cw-windows/cw-${{ github.ref_name }}-windows.zip
         generate_release_notes: true
