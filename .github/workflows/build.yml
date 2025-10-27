@@ -25,7 +25,7 @@ jobs:
             archive_ext: '.tar.gz'
 
     runs-on: ${{ matrix.os }}
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -67,7 +67,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
-    
+
     steps:
     - name: Download all artifacts
       uses: actions/download-artifact@v4
@@ -77,19 +77,15 @@ jobs:
     - name: List artifacts
       run: ls -R ./artifacts
 
-    - name: Debug file structure
+    - name: Find and prepare release files
       run: |
-        echo "=== 完整的文件结构 ==="
-        find ./artifacts -type f -name "*" | sort
-        echo "=== Artifacts 目录内容 ==="
-        ls -la ./artifacts/
-        echo "=== 检查每个子目录 ==="
-        for dir in ./artifacts/*/; do
-          if [ -d "$dir" ]; then
-            echo "目录: $dir"
-            ls -la "$dir"
-          fi
-        done
+        echo "=== 查找所有文件 ==="
+        find . -name "*.tar.gz" -o -name "*.zip" | grep -v node_modules | sort
+        mkdir -p ./release_files
+        find . -name "cw-*.tar.gz" -exec cp {} ./release_files/ \;
+        find . -name "cw-*.zip" -exec cp {} ./release_files/ \;
+        echo "=== 准备发布的文件 ==="
+        ls -la ./release_files/
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
