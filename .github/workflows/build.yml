@@ -45,13 +45,15 @@ jobs:
       run: |
         pyinstaller --onefile --name cw${{ matrix.extension }} code_weave.py
 
-    - name: Create platform archive
+    - name: Create platform archive (Linux/macOS)
+      if: matrix.os != 'windows-latest'
       run: |
-        if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          7z a cw-${{ github.ref_name }}-${{ matrix.name }}${{ matrix.archive_ext }} dist/cw${{ matrix.extension }}
-        else
-          tar czf cw-${{ github.ref_name }}-${{ matrix.name }}${{ matrix.archive_ext }} -C dist cw${{ matrix.extension }}
-        fi
+        tar czf cw-${{ github.ref_name }}-${{ matrix.name }}${{ matrix.archive_ext }} -C dist cw${{ matrix.extension }}
+
+    - name: Create platform archive (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        Compress-Archive -Path "dist\cw${{ matrix.extension }}" -DestinationPath "cw-${{ github.ref_name }}-${{ matrix.name }}${{ matrix.archive_ext }}"
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
