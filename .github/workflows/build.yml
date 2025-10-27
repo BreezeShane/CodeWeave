@@ -69,7 +69,6 @@ jobs:
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
         files: |
           ./artifacts/code_weave-linux/code_weave
           ./artifacts/code_weave-windows/code_weave.exe
