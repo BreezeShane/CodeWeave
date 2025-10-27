@@ -43,6 +43,7 @@ jobs:
 
     - name: Build executable with PyInstaller
       run: |
+        echo "__version__ = '${{ github.ref_name }}'" > _version.py
         pyinstaller --onefile --name cw${{ matrix.extension }} code_weave.py
 
     - name: Create platform archive (Linux/macOS)
@@ -74,13 +75,8 @@ jobs:
       with:
         path: ./artifacts
 
-    - name: List artifacts
-      run: ls -R ./artifacts
-
-    - name: Find and prepare release files
-      run: |
-        echo "=== 查找所有文件 ==="
-        ls -R ./
+    - name: List all files
+      run: ls -R ./
 
     - name: Create Release
       uses: softprops/action-gh-release@v2

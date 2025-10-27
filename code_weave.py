@@ -8,6 +8,11 @@ from typing import Optional
 import chardet
 from tqdm import tqdm
 
+try:
+    from _version import __version__
+except ImportError:
+    __version__ = "dev"
+
 TEMPLATE = """
 ## File Path: {}
 
@@ -122,7 +127,12 @@ def read_file_safe(file_path) -> Optional[str]:
 
 def main():
     """ Concatenate all files in project into a single markdown file. """
-    parser = argparse.ArgumentParser(description='Concat files into a single file.')
+    parser = argparse.ArgumentParser(
+        description='Concat files into a single file.',
+        epilog=f'CodeWeave v{__version__} - https://github.com/BreezeShane/CodeWeave'
+    )
+    parser.add_argument("-v", "--version", action="version", version=f"CodeWeave v{__version__}",
+                        help="Show version information and exit")
     parser.add_argument("path", type=str, help="The root dir path to scan.")
     parser.add_argument("-E", "--exclude-dirs", type=str,
                             help="Exclude directories (separated by |)")
