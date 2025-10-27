@@ -14,12 +14,15 @@ jobs:
           - os: ubuntu-latest
             name: linux
             extension: ''
+            archive_ext: '.tar.gz'
           - os: windows-latest
             name: windows
             extension: '.exe'
+            archive_ext: '.zip'
           - os: macos-latest
             name: macos
             extension: ''
+            archive_ext: '.tar.gz'
 
     runs-on: ${{ matrix.os }}
     
@@ -40,13 +43,21 @@ jobs:
 
     - name: Build executable with PyInstaller
       run: |
-        pyinstaller --onefile --name code_weave${{ matrix.extension }} code_weave.py
+        pyinstaller --onefile --name cw${{ matrix.extension }} code_weave.py
+
+    - name: Create platform archive
+      run: |
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          7z a cw-${{ github.ref_name }}-${{ matrix.name }}${{ matrix.archive_ext }} dist/cw${{ matrix.extension }}
+        else
+          tar czf cw-${{ github.ref_name }}-${{ matrix.name }}${{ matrix.archive_ext }} -C dist cw${{ matrix.extension }}
+        fi
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: code_weave-${{ matrix.name }}
-        path: dist/code_weave${{ matrix.extension }}
+        name: cw-${{ matrix.name }}${{ matrix.archive_ext }}
+        path: cw-${{ github.ref_name }}-${{ matrix.name }}${{ matrix.archive_ext }}
 
   create-release:
     needs: build
@@ -54,8 +65,6 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
-      packages: read
-      checks: read
     
     steps:
     - name: Download all artifacts
@@ -70,7 +79,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          ./artifacts/code_weave-linux/code_weave
-          ./artifacts/code_weave-windows/code_weave.exe
-          ./artifacts/code_weave-macos/code_weave
+          ./artifacts/cw-linux.tar.gz
+          ./artifacts/cw-windows.zip
+          ./artifacts/cw-macos.tar.gz
         generate_release_notes: true
