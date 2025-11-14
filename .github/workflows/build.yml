@@ -4,7 +4,9 @@ on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
+    branches: [main, develop, feature/*]
+  pull_request:
+    branches: [main]
 
 jobs:
   build:
