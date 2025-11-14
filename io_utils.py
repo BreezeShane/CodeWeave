@@ -76,3 +76,10 @@ def detect_encoding(file_path):
         raw_data = f.read(1024)
         result = chardet.detect(raw_data)
         return result.get('encoding', 'utf-8')
+
+def check_code_block_exists(content: str) -> bool:
+    """ Check if the text contains '```' characters. """
+    pos = content.find("```")
+    if pos == -1:
+        return False
+    return True
