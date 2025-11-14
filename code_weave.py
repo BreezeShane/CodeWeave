@@ -73,7 +73,7 @@ def parse_arguments():
                             help="Output file path")
     parser.add_argument("--max-file-size", type=int, default=1024*1024,
                             help="Max file size to process (bytes)")
-    parser.add_argument("--include-hidden", action="store_true",
+    parser.add_argument("-H", "--include-hidden", action="store_true",
                             help="Include hidden files and directories")
     return parser.parse_args()
 
