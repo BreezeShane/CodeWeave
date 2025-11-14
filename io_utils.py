@@ -6,6 +6,8 @@ from typing import Optional
 from pathlib import Path
 import chardet
 
+from constant_variable import EXCLUDING_EXTENSION, EXCLUDING_DIRECTORY
+
 def filter_dirs(
         dir_path,
         excluded_dict: dict,
@@ -28,6 +30,8 @@ def filter_dirs(
             continue
         if any(exclude_dir in path.parts for exclude_dir in excluded_dirs):
             continue
+        if any(exclude_dir in path.parts for exclude_dir in EXCLUDING_DIRECTORY):
+            continue
         if path.parts[-1] in excluded_files:
             continue
         if path.suffix.lower() in excluded_extensions:
@@ -46,8 +50,7 @@ def should_process_file(file_path: Path, max_size=1024*1024):
 def is_text_file(file_path):
     """ Check if text file. """
     try:
-        binary_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.pdf', '.exe', '.dll'}
-        if file_path.suffix.lower() in binary_extensions:
+        if file_path.suffix.lower() in EXCLUDING_EXTENSION:
             return False
         with open(file_path, 'rb') as f:
             chunk = f.read(1024)
