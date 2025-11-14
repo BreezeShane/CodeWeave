@@ -16,12 +16,15 @@ def filter_dirs(
     excluded_dirs       = excluded_dict.get("dirs"),
     excluded_files      = excluded_dict.get("files"),
     excluded_extensions = excluded_dict.get("extensions")
-    dir_path = Path(dir_path)
+    dir_path = Path(dir_path).resolve()
 
     for path in dir_path.rglob("*"):
         if not should_process_file(path, max_size):
             continue
-        if exclude_hidden and any(part.startswith('.') for part in path.parts):
+        if exclude_hidden and any(
+            part.startswith('.')
+            for part in path.parts
+        ):
             continue
         if any(exclude_dir in path.parts for exclude_dir in excluded_dirs):
             continue
@@ -56,7 +59,6 @@ def is_text_file(file_path):
 
 def read_file_safe(file_path) -> Optional[str]:
     """ Read file safely, handle problems of encoding and permissions. """
-    print(file_path)
     try:
         return file_path.read_text(encoding="utf-8")
     except UnicodeDecodeError:
