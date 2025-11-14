@@ -1,132 +1,59 @@
 """
-    Concat text files into a single file.
+    Main process flow.
 """
+
 import argparse
 from pathlib import Path
-from typing import Optional
-
-import chardet
 from tqdm import tqdm
 
+from constant_variable import TEMPLATE
+from file_parser import get_language
+from io_utils import (
+    filter_dirs,
+    read_file_safe
+)
+
 try:
-    from _version import __version__
+    from project_version import __version__
 except ImportError:
     __version__ = "dev"
 
-TEMPLATE = """
-## File Path: {}
-
-```{}
-{}
-```
-"""
-
-def parse_excluded(reg_string: str, split_char: str = "|"):
-    """ Parse the string to a list of excluded file paths. """
-    if reg_string is None:
-        return None
-    return reg_string.split(split_char)
-
-def detect_encoding(file_path):
-    """ Detect encoding. """
-    with open(file_path, 'rb') as f:
-        raw_data = f.read(1024)
-        result = chardet.detect(raw_data)
-        return result.get('encoding', 'utf-8')
-
-def filter_dirs(
-        dir_path,
-        max_size=1024*1024,
-        excluded_dirs=None,
-        excluded_files=None,
-        excluded_extensions=None,
-        exclude_hidden=True
-    ):
-    """ Filter the dirs to exclude specified paths. """
-    if excluded_dirs is None:
-        excluded_dirs = set()
-    if excluded_files is None:
-        excluded_files = set()
-    if excluded_extensions is None:
-        excluded_extensions = set()
-
-    if isinstance(excluded_dirs, list):
-        excluded_dirs = set(excluded_dirs)
-    if isinstance(excluded_files, list):
-        excluded_files = set(excluded_files)
-    if isinstance(excluded_extensions, list):
-        excluded_extensions = set(excluded_extensions)
-
-    for path in dir_path.rglob("*"):
-        if not should_process_file(path, max_size):
-            continue
-        if exclude_hidden and any(part.startswith('.') for part in path.parts):
-            continue
-        if any(exclude_dir in path.parts for exclude_dir in excluded_dirs):
-            continue
-        if path.parts[-1] in excluded_files:
-            continue
-        if path.suffix.lower() in excluded_extensions:
-            continue
-        if not is_text_file(path):
-            continue
-        yield path
-
-def get_language(path: Path):
-    """ Get the language used in the file. """
-    extension_map = {
-        '.py': 'python', '.js': 'javascript', '.jsx': 'javascript',
-        '.ts': 'typescript', '.tsx': 'typescript', '.java': 'java',
-        '.cpp': 'cpp', '.c': 'c', '.h': 'c', '.hpp': 'cpp',
-        '.html': 'html', '.css': 'css', '.scss': 'scss', '.sass': 'sass',
-        '.json': 'json', '.yaml': 'yaml', '.yml': 'yaml',
-        '.md': 'markdown', '.xml': 'xml', '.sql': 'sql',
-        '.sh': 'bash', '.bash': 'bash', '.zsh': 'bash',
-        '.php': 'php', '.rb': 'ruby', '.go': 'go',
-        '.rs': 'rust', '.swift': 'swift', '.kt': 'kotlin'
-    }
-    return extension_map.get(path.suffix.lower(), 'text')
-
-def should_process_file(file_path: Path, max_size=1024*1024):
-    """ Check if the file should be processed. """
-    try:
-        return file_path.stat().st_size <= max_size
-    except Exception as _:
-        return False
-
-def is_text_file(file_path):
-    """ Check if text file. """
-    try:
-        binary_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.pdf', '.exe', '.dll'}
-        if file_path.suffix.lower() in binary_extensions:
-            return False
-        with open(file_path, 'rb') as f:
-            chunk = f.read(1024)
-            if b'\0' in chunk:
-                return False
-        return True
-    except Exception as _e:
-        return False
-
-def read_file_safe(file_path) -> Optional[str]:
-    """ Read file safely, handle problems of encoding and permissions. """
-    try:
-        return file_path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        try:
-            encoding_format = detect_encoding(file_path)
-            return file_path.read_text(encoding=encoding_format)
-        except Exception as e:
-            print(f"# Unable to read file: {file_path} (Might be binary file.) - {e}\n")
-    except PermissionError:
-        print(f"# No permission to read file: {file_path}\n")
-    except Exception as e:
-        print(f"# Error while reading file: {file_path} - {e}\n")
-
-    return None
-
 def main():
     """ Concatenate all files in project into a single markdown file. """
+    args = parse_arguments()
+    file_count = 0
+
+    excluded = wrap_exclude_dict(
+        excluded_dirs=args.exclude_dirs,
+        excluded_files=args.exclude_files,
+        excluded_extensions=args.exclude_extensions
+    )
+
+    concatenated_text = "# Contents of all files\n"
+    for file_path in tqdm(filter_dirs(
+        dir_path=args.path,
+        max_size=args.max_file_size,
+        excluded_dict=excluded,
+        exclude_hidden=not args.include_hidden
+    ), desc="Processing files..."):
+        if not file_path.is_file():
+            continue
+        lang = get_language(file_path)
+
+        content = read_file_safe(file_path)
+        if content is None:
+            continue
+
+        concatenated_text += TEMPLATE.format(file_path, lang, content)
+        file_count += 1
+    concatenated_text += f"\n\n---\n**Total files processed:** {file_count}\n"
+
+    dest_file_path = Path(args.output)
+    dest_file_path.write_text(concatenated_text, encoding="utf-8")
+    print(f"Success: Processed {file_count} files to {dest_file_path}")
+
+def parse_arguments():
+    """ Parse console arguments. """
     parser = argparse.ArgumentParser(
         description='Concat files into a single file.',
         epilog=f'CodeWeave v{__version__} - https://github.com/BreezeShane/CodeWeave'
@@ -146,34 +73,43 @@ def main():
                             help="Max file size to process (bytes)")
     parser.add_argument("--include-hidden", action="store_true",
                             help="Include hidden files and directories")
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    file_count = 0
+def parse_excluded(reg_string: str, split_char: str = "|"):
+    """ Parse the string to a list of excluded file paths. """
+    if reg_string is None:
+        return None
+    return reg_string.split(split_char)
 
-    concatenated_text = "# Contents of all files\n"
-    for file_path in tqdm(filter_dirs(
-        Path(args.path),
-        args.max_file_size,
-        parse_excluded(args.exclude_dirs),
-        parse_excluded(args.exclude_files),
-        parse_excluded(args.exclude_extensions),
-        not args.include_hidden
-    ), desc="Processing files..."):
-        if not file_path.is_file():
-            continue
-        lang = get_language(file_path)
+def wrap_exclude_dict(
+        excluded_dirs: str,
+        excluded_files: str,
+        excluded_extensions: str
+    ) -> dict:
+    """ Wrap exclude dict. """
+    excluded_dirs       = parse_excluded(excluded_dirs)
+    excluded_files      = parse_excluded(excluded_files)
+    excluded_extensions = parse_excluded(excluded_extensions)
 
-        content = read_file_safe(file_path)
-        if content is None:
-            continue
+    if excluded_dirs is None:
+        excluded_dirs = set()
+    if excluded_files is None:
+        excluded_files = set()
+    if excluded_extensions is None:
+        excluded_extensions = set()
 
-        concatenated_text += TEMPLATE.format(file_path, lang, content)
-        file_count += 1
-    concatenated_text += f"\n\n---\n**Total files processed:** {file_count}\n"
+    if isinstance(excluded_dirs, list):
+        excluded_dirs = set(excluded_dirs)
+    if isinstance(excluded_files, list):
+        excluded_files = set(excluded_files)
+    if isinstance(excluded_extensions, list):
+        excluded_extensions = set(excluded_extensions)
 
-    dest_file_path = Path(args.output)
-    dest_file_path.write_text(concatenated_text, encoding="utf-8")
-    print(f"Success: Processed {file_count} files to {dest_file_path}")
+    return {
+        "dirs"        : excluded_dirs,
+        "files"       : excluded_files,
+        "extensions"  : excluded_extensions,
+    }
 
 if __name__ == "__main__":
     main()
